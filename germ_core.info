@@ -1,0 +1,4 @@
+name = Germ Core
+description = Germ specific mods.
+core = 7.x
+package = Germ

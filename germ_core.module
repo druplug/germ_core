@@ -1,0 +1,10 @@
+<?php
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function germ_core_form_issue_node_form_alter(&$form, &$form_state, $form_id) {
+  global $user; 
+  $form['field_assign_to']['und']['#options'][$user->uid] = t('myself');
+  $form['field_assign_to']['und']['#default_value'] = $user->uid;
+  }

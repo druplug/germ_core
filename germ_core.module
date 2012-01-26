@@ -9,4 +9,7 @@ function germ_core_form_issue_node_form_alter(&$form, &$form_state, $form_id) {
     $form['field_assign_to']['und']['#default_value'] = $user->uid;
     $form['title']['#type'] = 'value';
     $form['title']['#required'] = FALSE;
+    if(arg(2) == 'edit') {
+        $form['field_project']['und']['#type'] = 'value';
+    }
 }

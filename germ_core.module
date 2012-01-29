@@ -10,7 +10,22 @@ function germ_core_form_issue_node_form_alter(&$form, &$form_state, $form_id) {
   $form['title']['#required'] = FALSE;
   if (arg(2) == 'edit') {
     $form['field_project']['und']['#type'] = 'value';
+    // make this as an option
+    $form['#validate'][] = 'germ_core_close_actuals_validate';
+    $form['field_estimated_time']['#disabled'] = TRUE;
   } else {
     $form['field_assign_to']['und']['#default_value'] = $user->uid;
+  }
+}
+
+/**
+ * validate to see if Actuals are filled before the issue is closed.
+ */
+function germ_core_close_actuals_validate($form, &$form_state) {
+  $issue_status = taxonomy_term_load($form_state['values']['field_status']['und'][0]['tid']);
+  if ($issue_status->name == t('Closed')) {
+    if (empty($form_state['values']['field_actual_time']['und']['0']['value'])) {
+      form_set_error('field_actual_time', t('Actuals cannot be empty for a closed issue.'));
+    }
   }
 }

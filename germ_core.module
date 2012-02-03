@@ -5,6 +5,10 @@
  */
 function germ_core_form_issue_node_form_alter(&$form, &$form_state, $form_id) {
   global $user;
+  // dropdown ajax
+  $options_first = _germ_core_project_options();
+  $selected = isset($form_state['values']['field_project']) ? $form_state['values']['field_project'] : key($options_first);
+
   $form['field_assign_to']['und']['#options'][$user->uid] = t('myself');
   $form['title']['#type'] = 'value';
   $form['title']['#required'] = FALSE;
@@ -13,10 +17,74 @@ function germ_core_form_issue_node_form_alter(&$form, &$form_state, $form_id) {
     // make this as an option
     $form['#validate'][] = 'germ_core_close_actuals_validate';
     $form['field_estimated_time']['#disabled'] = TRUE;
+    // show only roadmaps pertaining to a project
+    $form['field_roadmap']['und']['#options'] = _germ_core_get_roadmaps($form['field_project']['und']['#default_value'][0]);
   } else {
     $form['field_assign_to']['und']['#default_value'] = $user->uid;
+    // do ajax stuff only while adding
+    $form['field_project']['und']['#ajax']['callback'] = 'project_dropdown_callback';
+    $form['field_project']['und']['#ajax']['wrapper'] = 'roadmap_replace';
+    $form['field_project']['und']['#options'] = $options_first;
+    $form['field_project']['und']['#default_value'] = $selected;
+
+    $form['field_roadmap']['und']['#prefix'] = '<div id="roadmap_replace">';
+    $form['field_roadmap']['und']['#suffix'] = '</div>';
+    $form['field_roadmap']['und']['#options'] = _germ_core_roadmap_options($selected);
+    $form['field_roadmap']['und']['#default_value'] = isset($form_state['values']['field_roadmap']) ? $form_state['values']['field_roadmap'] : '';    
   }
 }
+
+function _germ_core_project_options() {
+  $projects = array('_none'=> '- Select a value -');
+  $query = new EntityFieldQuery;
+  $result = $query
+          ->entityCondition('entity_type', 'node')
+          ->propertyCondition('type', 'project')
+          ->propertyCondition('status', 1)
+          ->execute();
+
+  if (!empty($result['node'])) {
+    $nodes = node_load_multiple(array_keys($result['node']));
+    foreach ($nodes as $project) {
+      $projects[$project->nid] = $project->title;
+    }
+  }
+  return $projects;
+}
+
+function _germ_core_roadmap_options($key = '') {
+  if (is_array($key)) {
+    return _germ_core_get_roadmaps($key['und'][0]['nid']);
+  } 
+  else {
+    return array();
+  }
+}
+
+function _germ_core_get_roadmaps($project_nid) {
+  $roadmaps = array('_none' => '- None -');
+  $query = new EntityFieldQuery;
+  $result = $query
+          ->entityCondition('entity_type', 'node')
+          ->propertyCondition('type', 'roadmap')
+          ->propertyCondition('status', 1)
+          ->fieldCondition('field_project', 'nid', $project_nid, '=')
+          ->execute();
+
+  if (!empty($result['node'])) {
+    $nodes = node_load_multiple(array_keys($result['node']));
+    foreach ($nodes as $roadmap) {
+      $roadmaps[$roadmap->nid] = $roadmap->title;
+    }
+  }
+  return $roadmaps;
+}
+
+function project_dropdown_callback($form, $form_state) {
+  return $form['field_roadmap'];
+}
+
+
 
 /**
  * validate to see if Actuals are filled before the issue is closed.
